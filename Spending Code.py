@@ -9,10 +9,7 @@ fiscal_year = input("Enter fiscal year: ")
 base_url = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/mts/mts_table_1"
 
 #Gets totals
-params = {
-    "filter": f"record_date:eq:{fiscal_year}-09-30",
-    "page[size]": 100
-}
+params = {"filter": f"record_date:eq:{fiscal_year}-09-30","page[size]": 100}
 
 response = requests.get(base_url, params=params)
 response.raise_for_status()
