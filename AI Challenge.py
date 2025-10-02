@@ -46,6 +46,6 @@ for agency in agency_data:
 
 df_agencies_budget = pd.DataFrame(agency_budget_list)
 
-print(df_agencies_budget)
+df_agencies_budget.head()
 
 # idrk what obligations or outlays are i just saw them on the gov spending website
