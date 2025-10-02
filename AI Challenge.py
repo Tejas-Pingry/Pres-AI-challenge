@@ -37,8 +37,7 @@ for agency in agency_data:
         budgetary_resources = year_data.get("agency_budgetary_resources") or 0
         obligations = year_data.get("agency_total_obligated") or 0
         outlays = year_data.get("agency_total_outlayed") or 0
-
-    sleep(0.1)
+        
         #printingdata
         agency_budget_list.append({"Agency Code": agency_code,"Agency Name": agency_name,"Fiscal Year": fiscal_year,"Budgetary Resources": budgetary_resources,"Obligations": obligations,"Outlays": outlays})
         print(f"{agency_name} - Budget: ${budgetary_resources:,.2f}, Obligations: ${obligations:,.2f}, Outlays: ${outlays:,.2f}")
