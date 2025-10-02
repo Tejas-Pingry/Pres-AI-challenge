@@ -4,51 +4,53 @@ from time import sleep
 
 pd.set_option("display.float_format", "{:,.2f}".format)
 
-fiscal_year = input("Enter fiscal year: ")
-
-base_url = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/mts/mts_table_1"
-
-#Gets totals
-params = {"filter": f"record_date:eq:{fiscal_year}-09-30","page[size]": 100}
-
-response = requests.get(base_url, params=params)
+# basic variables
+fiscal_year=input("Enter fiscal year: ")
+agencies_url="https://api.usaspending.gov/api/v2/references/toptier_agencies/"
+response = requests.get(agencies_url)
 response.raise_for_status()
-data = response.json()
+agency_data = response.json().get("results", [])
 
-revenue_data = data.get("data", [])
+# setting empty list for budget
+agency_budget_list=[]
 
-# Sets empty revenue list
-revenue_list = []
-
-# Loops to get data
-for entry in revenue_data:
-    category = entry.get("classification_desc", "N/A")
-    year = fiscal_year
-    
-    #Gets the amounts/receipts
-    amounts = (entry.get("current_month_rcpt_amt") or entry.get("fytd_rcpt_amt") or entry.get("current_month_gross_rcpt_amt") or entry.get("fytd_gross_rcpt_amt") or "0")
-    
-    try:
-        amounts = float(amounts)
-    except (ValueError, TypeError):
-        amounts = 0.0
-    if "FY" in category and category != f"FY {fiscal_year}":
+# looping through agencys to get data
+for agency in agency_data:
+    agency_code=agency.get("toptier_code")
+    agency_name=agency.get("agency_name", "N/A")
+    if not agency_code:
         continue
-    # prints data
-    revenue_list.append({
-        "Fiscal Year": year,
-        "Revenue Category": category,
-        "Total Receipts (Millions)": amounts
-    })
+
+    budget_url=f"https://api.usaspending.gov/api/v2/agency/{agency_code}/budgetary_resources/?fiscal_year={fiscal_year}"
+    budget_response = requests.get(budget_url)
     
-    print(f"{category} ({year}) - Total Amounts: ${amounts:,.2f}")
+    if budget_response.status_code != 200:
+        print(f"Failed to get budget for {agency_name}")
+        continue
+
+    budget_data=budget_response.json()
+    year_data=None
+    for year_entry in budget_data.get("agency_data_by_year", []):
+        if year_entry.get("fiscal_year") == fiscal_year:
+            year_data = year_entry
+            break
     
-    sleep(0.1)
+    if year_data:
+        budgetary_resources = year_data.get("agency_budgetary_resources") or 0
+        obligations = year_data.get("agency_total_obligated") or 0
+        outlays = year_data.get("agency_total_outlayed") or 0
 
-df_revenue = pd.DataFrame(revenue_list)
+        # printing data
+        agency_budget_list.append({"Agency Code": agency_code,"Agency Name": agency_name,"Fiscal Year": fiscal_year,"Budgetary Resources": budgetary_resources,"Obligations": obligations,"Outlays": outlays})
+        print(f"{agency_name} - Budget: ${budgetary_resources:,.2f}, Obligations: ${obligations:,.2f}, Outlays: ${outlays:,.2f}")
+    else:
+        print(f"No data for {agency_name} (Code {agency_code}) in Fiscal yeaar {fiscal_year}")
 
-output_file = f"us_revenue_{fiscal_year}.csv"
-df_revenue.to_csv(output_file, index=False)
+df_agencies_budget = pd.DataFrame(agency_budget_list)
 
-print(f"\nSaved revenue data for {len(df_revenue)} categories to {output_file}")
-df_revenue.head(28)
+output_file = f"us_agencies_budget_{fiscal_year}.csv"
+df_agencies_budget.to_csv(output_file, index=False)
+
+df_agencies_budget.head(118)
+
+# idrk what obligations or outlays are i just saw them on the gov spending website
