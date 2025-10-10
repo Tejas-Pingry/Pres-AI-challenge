@@ -1,3 +1,17 @@
+'''
+# 1. First, install required libraries
+pip install pandas numpy scikit-learn matplotlib seaborn
+
+# 2. Run the multi-source extractor to get your CSV data
+python federal_spending_extractor.py
+
+# 3. Update the csv_files list in the training script with your actual filenames
+
+# 4. Run the training script
+python federal_spending_ai_trainer.py
+
+
+'''
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
