@@ -25,24 +25,46 @@ class GovSpendingAnalyzer:
         rev = pd.read_csv(self.revenue_file)
         print(f"✓ Loaded {len(spend):,} spending records and {len(rev):,} revenue records")
 
-        df = pd.merge(spend, rev, on="Fiscal Year", how="left")
-        df.drop_duplicates(inplace=True)
+        # Ensure standard column naming
+        spend.columns = spend.columns.str.strip()
+        rev.columns = rev.columns.str.strip()
 
-        numeric_cols = ["Budgetary Resources", "Obligations", "Outlays", "Total Receipts (Millions)"]
+        # If revenue data has no agency info, aggregate it by fiscal year only
+        if "Agency Name" not in rev.columns:
+            rev = rev.groupby("Fiscal Year", as_index=False)["Total Receipts (Millions)"].sum()
+
+        # Merge on both Fiscal Year and Agency Name when possible
+        if "Agency Name" in rev.columns:
+            df = pd.merge(spend, rev, on=["Fiscal Year", "Agency Name"], how="left")
+        else:
+            df = pd.merge(spend, rev, on="Fiscal Year", how="left")
+
+        df.drop_duplicates(subset=["Agency Name", "Fiscal Year"], inplace=True)
+
+        # Clean numeric data
+        numeric_cols = [
+            "Budgetary Resources", "Obligations", "Outlays", "Total Receipts (Millions)"
+        ]
         for c in numeric_cols:
             if c in df.columns:
                 df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
 
+        # Derived metrics
         df["Obligation Rate"] = df["Obligations"] / df["Budgetary Resources"].replace(0, np.nan)
-        df["Outlay Rate"] = df["Outlays"] / df["Budgetary Resources"].replace(0, np.nan)
+        df["Outlay Rate"] = df["Outlays"] / df["Obligations"].replace(0, np.nan)
+        df["Efficiency"] = df["Outlays"] / df["Budgetary Resources"].replace(0, np.nan)
         df.fillna(0, inplace=True)
+
+        # Add trend by agency (previous year efficiency change)
+        df["Efficiency Trend"] = df.groupby("Agency Name")["Efficiency"].diff().fillna(0)
 
         self.features = [
             "Budgetary Resources", "Obligations", "Outlays",
-            "Total Receipts (Millions)", "Obligation Rate", "Outlay Rate"
+            "Total Receipts (Millions)", "Obligation Rate",
+            "Outlay Rate", "Efficiency", "Efficiency Trend"
         ]
         self.df = df
-        print(f"✓ Data ready with {len(df):,} records and {len(self.features)} features")
+        print(f"✓ Data ready with {len(df):,} agencies and {len(self.features)} features")
 
     # ---------------------- FEATURE ENGINEERING ----------------------
     def engineer_targets(self):
@@ -66,22 +88,17 @@ class GovSpendingAnalyzer:
 
         print("✓ Metrics created — Deviation, Category, Risk")
 
-        # ✅ Show as DataFrame
-        preview = df[["Agency Name", "Spending Category", "Spending Deviation", "Spending Risk (USD)"]].copy()
+        preview = df[["Agency Name", "Fiscal Year", "Spending Category",
+                      "Spending Deviation", "Spending Risk (USD)"]].copy()
         preview["Spending Deviation"] = preview["Spending Deviation"].round(3)
         preview["Spending Risk (USD)"] = preview["Spending Risk (USD)"].round(2)
-        preview = preview.head(10).reset_index(drop=True)
+        display(preview.head(10))
 
-        print("\nPreview of calculated metrics:")
-        display(preview)
-
-        # ✅ Summary
         summary = df["Spending Category"].value_counts().reset_index()
         summary.columns = ["Spending Category", "Count"]
-        print("\nSummary by Spending Category:")
         display(summary)
 
-        # ✅ Save both to Excel
+        # Save to Excel
         output_file = f"federal_spending_analysis_{self.fiscal_year}.xlsx"
         with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
             preview.to_excel(writer, index=False, sheet_name="Preview")
@@ -111,7 +128,7 @@ class GovSpendingAnalyzer:
         y_train_enc = le.fit_transform(y_train_c)
         y_test_enc = le.transform(y_test_c)
 
-        clf = RandomForestClassifier(n_estimators=150, random_state=42)
+        clf = RandomForestClassifier(n_estimators=200, random_state=42)
         clf.fit(X_train_s, y_train_enc)
         acc = clf.score(X_test_s, y_test_enc)
         print(f"✓ Category Classifier trained — accuracy: {acc:.2f}")
