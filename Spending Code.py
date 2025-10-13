@@ -54,3 +54,28 @@ df_agencies_budget.to_csv(output_file, index=False)
 df_agencies_budget.head(118)
 
 # idrk what obligations or outlays are i just saw them on the gov spending website
+
+
+
+'''
+
+Here's what outlays and obligations are: 
+
+In the federal budget, an obligation is a binding commitment to make a payment for goods, services, or other obligations, such as awarding a grant, signing a contract, or compensating federal workers. 
+These are legal liabilities to disburse funds, either immediately or in the future, and occur when the government enters into a binding agreement. 
+Obligations are distinct from "outlays," which are the actual payments made. 
+
+
+
+What outlays represent:
+Actual payments: Outlays show the money that has been paid out, rather than just promised. 
+Liquidating obligations: They are the result of the government making a payment to settle a legal obligation, which can be funded by an appropriation or permanent law. 
+A measure of spending: Outlays are used to determine the size of the actual federal spending and, therefore, the annual deficit or surplus, as they are the amount that is higher than the revenue collected. 
+
+
+Examples of outlays:
+Disbursing payments: The Social Security Administration making payments to beneficiaries. 
+Making payments for contracts: When a federal agency makes a payment to a contractor. 
+Issuing grants: Transferring funds to a recipient's bank account. 
+Personnel compensation: Paying salaries to federal employees. 
+'''
